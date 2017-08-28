@@ -1,0 +1,28 @@
+{
+  "name": "jquery-momentum-scrolling-ignorer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:dev": "gulp",
+    "build:dev:js": "gulp js",
+    "build:prod": "gulp --env=production",
+    "build:prod:js": "gulp js --env=production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kunihiko-sugiura/jquery-momentum-scrolling-ignorer.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://github.com/kunihiko-sugiura/jquery-momentum-scrolling-ignorer",
+  "devDependencies": {
+    "browser-sync": "^2.18.8",
+    "gulp": "^3.9.1",
+    "gulp-if": "^2.0.2",
+    "gulp-notify": "^3.0.0",
+    "gulp-plumber": "^1.1.0",
+    "gulp-uglify": "^2.0.1",
+    "minimist": "^1.2.0"
+  }
+}

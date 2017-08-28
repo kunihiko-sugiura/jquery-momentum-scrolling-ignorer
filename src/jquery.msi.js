@@ -5,6 +5,7 @@
     var isPlusDirection = true;
     var scrollResetTimeoutId = null;
     var setting = null;
+    var touchStartXY = {};
 
     var methods = {
         /**
@@ -12,8 +13,14 @@
          * @returns {*}
          */
         init : function( options ) {
-            $(document).bind( mousewheelevent, wheelEvent);
+            $(document).bind( mousewheelevent, onWheel);
 
+            console.log( "SupportTouch:" + (isSupportTouch() ? "Yes" : "no") );
+
+            if( isSupportTouch() ) {
+                $(document).on('touchstart', onTouchStart);
+                $(document).on('touchend', onTouchEnd);
+            }
             // 対象要素のdata属性
             var data = $(this).data( 'msi' );
             // ** data属性が無い場合、未初期化と判断
@@ -26,20 +33,29 @@
                 });
             }
         },
-        destroy : function( ) {
+        destroy : function() {
             $(document).unbind( mousewheelevent );
         },
-        getSetting() {
+        getSetting: function() {
             return setting;
-        },
+        }
     };
 
     //region Private Methods
 
+    var isSupportTouch = function() {
+        return window.ontouchstart === null;
+    };
+
+    //region Wheel Events
+
+    var hasNotScrollEvents = function() {
+        return Object.keys(scrollEvents).length === 0;
+    };
     var scrollEventTimeout = function(eventTime){
         if( scrollEvents[eventTime] ) {
             delete scrollEvents[eventTime];
-            if( Object.keys(scrollEvents).length == 0 && scrollResetTimeoutId != null ) {
+            if( Object.keys(scrollEvents).length === 0 && scrollResetTimeoutId !== null ) {
                 clearTimeout(scrollResetTimeoutId);
             }
         }
@@ -53,7 +69,7 @@
         }
     };
 
-    var wheelEvent = function(e){
+    var onWheel = function(e){
         e.preventDefault();
 
         var deltaY = e.originalEvent.deltaY ? -(e.originalEvent.deltaY) : e.originalEvent.wheelDelta ? e.originalEvent.wheelDelta : -(e.originalEvent.detail);
@@ -61,8 +77,6 @@
     };
 
     var scrollEventFilter = function(deltaY, deltaX) {
-        var opt = methods.getSetting.apply(this);
-
         // TODO:横スクロールした時に上下も拾ってしまう。もう少し丁寧に拾った方がいいけど
         if( Math.abs(deltaX) >= 2 ) {
             return false;
@@ -71,20 +85,69 @@
             return false;
         }
         var currentIsPlusDirection = (deltaY > 0 );
-        if( Object.keys(scrollEvents).length == 0 || currentIsPlusDirection != isPlusDirection ) {
+
+        if( hasNotScrollEvents() || currentIsPlusDirection !== isPlusDirection ) {
             isPlusDirection = currentIsPlusDirection;
 
             scrollResetTimeout();
-            scrollResetTimeoutId = setTimeout( scrollResetTimeout, opt.resetMiliSec);
+            scrollResetTimeoutId = setTimeout( scrollResetTimeout, setting.resetMiliSec);
 
-            if(typeof opt.callbackScroll == "function") {
-                opt.callbackScroll(isPlusDirection);
-            }
+            onCallFunc();
         }
         var eventTime = + new Date();
         scrollEvents[eventTime] = eventTime;
-        setTimeout( scrollEventTimeout, opt.eventClearTime, eventTime);
+        setTimeout( scrollEventTimeout, setting.eventClearTime, eventTime);
     };
+
+    var onCallFunc = function() {
+        if(typeof setting.callbackScroll === "function") {
+            setting.callbackScroll(isPlusDirection);
+        } else {
+            console.log( 'Please check. "callbackScroll" parameter is not function!!!' );
+        }
+    };
+
+    //endregion
+
+    //region Touch Events
+
+    var getTouchXY = function(event) {
+        var original = event.originalEvent;
+        var xy = {
+            x:0,
+            y:0
+        };
+        if(original.changedTouches) {
+            xy.x = original.changedTouches[0].pageX;
+            xy.y = original.changedTouches[0].pageY;
+        } else {
+            xy.x = event.pageX;
+            xy.y = event.pageY;
+        }
+        return xy;
+    };
+
+    var isTouchDirectUp = function(startXY, endXY) {
+        return ( startXY.y - endXY.x ) > 0;
+    };
+
+    var isOverSwipeLimitEvent = function(startXY, endXY) {
+        return Math.abs( startXY.y - endXY.x ) > setting.touchSwipeMinWidth;
+    };
+
+    var onTouchStart = function(event){
+        touchStartXY =getTouchXY(event);
+    };
+
+    var onTouchEnd = function(event){
+        var touchEndXY =getTouchXY(event);
+        isPlusDirection = isTouchDirectUp( touchStartXY, touchEndXY );
+        if( isOverSwipeLimitEvent( touchStartXY, touchEndXY ) ) {
+            onCallFunc();
+        }
+    };
+
+    //endregion
 
     //endregion
 
@@ -122,8 +185,9 @@
 
     $.fn.msi.defaults = {
         callbackScroll: function(isPlusDirection){ console.log(isPlusDirection ? "Scroll:UP" : "Scroll:DOWN"); },
-        resetMiliSec: 1500,
-        eventClearTime: 100
+        resetMiliSec: 1600,
+        eventClearTime: 300,
+        touchSwipeMinWidth: 30
     };
 
     //endregion
